@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rock Paper Scissors - Start</title>
+    <style>
+        body {
+            font-family: 'Press Start 2P', cursive;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-image: url('/static/background.jpg');
+            background-size: cover;
+            background-position: center;
+            margin: 0;
+            height: 100vh;
+            color: #fff;
+            text-shadow: 2px 2px 4px #000;
+        }
+
+        h1, h2 {
+            text-align: center;
+            margin: 0;
+            padding: 10px;
+            font-size: 2rem;
+        }
+
+        input[type="text"] {
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 1rem;
+            text-align: center;
+            width: 80%;
+        }
+
+        button {
+            padding: 15px 30px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+
+        button:hover {
+            background-color: #218838;
+            transform: scale(1.1);
+        }
+
+        #name-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        @media (max-width: 768px) {
+            h1, h2 {
+                font-size: 1.5rem;
+            }
+            button {
+                padding: 10px 20px;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+</head>
+<body>
+    <h1>Rock Paper Scissors Game</h1>
+    <div id="name-container">
+        <h2>Enter Your Name</h2>
+        <input type="text" id="player-name" placeholder="Player Name">
+        <button onclick="startGame()">Start Game</button>
+    </div>
+
+    <script>
+        function startGame() {
+            const playerName = document.getElementById('player-name').value;
+            if (playerName.trim() === "") {
+                alert("Please enter your name");
+                return;
+            }
+            // Redirect to the game page with player name as a query parameter
+            window.location.href = `/game?playerName=${encodeURIComponent(playerName)}`;
+        }
+    </script>
+</body>
+</html>

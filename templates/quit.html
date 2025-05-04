@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Over</title>
+    <style>
+        body {
+            font-family: 'Press Start 2P', cursive;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            color: #fff;
+            background-image: url('/static/background.jpg');
+            background-size: cover;
+            animation: bgAnimation 10s infinite alternate;
+            text-shadow: 2px 2px 4px #000;
+        }
+
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            animation: fadeIn 2s;
+        }
+
+        p {
+            font-size: 1.5rem;
+            margin-bottom: 30px;
+            animation: fadeIn 3s;
+        }
+
+        .button-container {
+            display: flex;
+            gap: 15px;
+        }
+
+        button {
+            padding: 15px 30px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+
+        button:hover {
+            background-color: #218838;
+            transform: scale(1.1);
+        }
+
+        @keyframes bgAnimation {
+            0% { opacity: 0.8; }
+            100% { opacity: 1; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+</head>
+<body>
+    <h1>Game Over</h1>
+    <p>You have exited the game. Thanks for playing!</p>
+    <p>Want to try again?</p>
+    <div class="button-container">
+        <button onclick="restartGame()">Restart Game</button>
+        <button onclick="window.location.href='/'">Return to Main Menu</button>
+    </div>
+
+    <script>
+        function restartGame() {
+            fetch('/start_game', { method: 'POST' }).then(() => {
+                window.location.href = '/'; // Redirect back to the game
+            });
+        }
+    </script>
+</body>
+</html>
