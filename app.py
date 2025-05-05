@@ -36,7 +36,7 @@ class GameState:
         self.result_text = "Get Ready!"
         self.ai_move = ""
         self.player_move = ""
-        self.round_time = 3  # seconds for each move
+        self.round_time = 5  # seconds for each move (increased from 3)
         self.result_time = 1.5  # seconds to show result
         self.round_counter = 0
         self.game_over = False
@@ -46,6 +46,7 @@ class GameState:
         self.showing_result = False
         self.last_valid_move = None
         self.moves_this_round = set()
+        self.waiting_for_next_round = False  # New flag to wait for next round
 
     def reset_round(self):
         self.last_valid_move = None
@@ -55,6 +56,7 @@ class GameState:
         self.player_move = ""
         self.ai_move = ""
         self.result_text = "Show your move!"
+        self.waiting_for_next_round = False  # Reset flag
 
 game_state = GameState()
 
@@ -129,7 +131,7 @@ def evaluate_round(player_move, ai_move):
     return "AI Wins!", 1
 
 def update_game_state(player_move):
-    if not player_move or player_move in game_state.moves_this_round:
+    if not player_move or player_move in game_state.moves_this_round or game_state.waiting_for_next_round:
         return
     game_state.moves_this_round.add(player_move)
     game_state.move_history.append(player_move)
@@ -151,7 +153,8 @@ def update_game_state(player_move):
     q_learning.update(current_state, prev_state, game_state.ai_move, reward, next_state)
     # Update round counter and check game over
     game_state.round_counter += 1
-    if game_state.round_counter >= 3:  # Best of 3 rounds
+    # Game over if either player or AI reaches 3 wins
+    if game_state.scores[0] >= 3 or game_state.scores[1] >= 3:
         game_state.game_over = True
         if game_state.scores[0] > game_state.scores[1]:
             game_state.result_text = "AI Wins the Game!"
@@ -164,9 +167,11 @@ def update_game_state(player_move):
     else:
         game_state.showing_result = True
         game_state.timer_start = time.time()
+        game_state.waiting_for_next_round = True  # Wait for next round button
 
 def generate_frames():
     last_predicted_gesture = None
+    last_confidence = 0.0
     consecutive_failures = 0
     MAX_FAILURES = 10
     try:
@@ -186,25 +191,34 @@ def generate_frames():
                 img = cv2.flip(img, 1)
                 hands, img = detector.findHands(img, flipType=False)
                 current_predicted_gesture = None
+                current_confidence = 0.0
                 if hands:
                     hand = hands[0]
                     x, y, w, h = hand['bbox']
                     imgCrop = img[y:y+h, x:x+w]
                     if imgCrop.size != 0:
-                        current_predicted_gesture = predict_gesture(imgCrop)
-                # Always show the current predicted gesture for feedback
+                        imgCrop_resized = cv2.resize(imgCrop, (224, 224))
+                        imgCrop_norm = imgCrop_resized / 255.0
+                        predictions = cnn_model.predict(np.expand_dims(imgCrop_norm, axis=0), verbose=0)
+                        confidence = np.max(predictions)
+                        predicted_class = class_names[np.argmax(predictions)]
+                        if confidence >= game_state.confidence_threshold:
+                            current_predicted_gesture = predicted_class
+                            current_confidence = confidence
+                # Show the current predicted gesture for feedback (bigger and only if confident)
                 if current_predicted_gesture:
                     last_predicted_gesture = current_predicted_gesture
-                    cv2.putText(img, f"Gesture: {current_predicted_gesture}", (20, 90), 
-                                cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 200, 0), 2)
+                    last_confidence = current_confidence
+                    cv2.putText(img, f"Gesture: {current_predicted_gesture}", (20, 120), 
+                                cv2.FONT_HERSHEY_SIMPLEX, 2.2, (255, 200, 0), 6, cv2.LINE_AA)
                 else:
-                    if last_predicted_gesture:
-                        cv2.putText(img, f"Gesture: {last_predicted_gesture}", (20, 90), 
-                                    cv2.FONT_HERSHEY_SIMPLEX, 1, (180, 180, 180), 1)
+                    if last_predicted_gesture and last_confidence >= game_state.confidence_threshold:
+                        cv2.putText(img, f"Gesture: {last_predicted_gesture}", (20, 120), 
+                                    cv2.FONT_HERSHEY_SIMPLEX, 2.2, (180, 180, 180), 4, cv2.LINE_AA)
                 # --- Single timer per move logic ---
                 if game_state.game_active and not game_state.game_over:
                     elapsed = time.time() - game_state.timer_start
-                    if not game_state.showing_result:
+                    if not game_state.showing_result and not game_state.waiting_for_next_round:
                         # Player's move phase
                         game_state.result_text = "Show your move!"
                         if current_predicted_gesture:
@@ -215,13 +229,9 @@ def generate_frames():
                             game_state.result_text = "No Move Detected! AI Wins the Round!"
                         if game_state.showing_result:
                             game_state.timer_start = time.time()
-                    else:
-                        # Showing result phase
-                        if elapsed >= game_state.result_time:
-                            if not game_state.game_over:
-                                game_state.reset_round()
-                cv2.putText(img, game_state.result_text, (20, 50), 
-                           cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                    # No automatic round reset; wait for next_round endpoint
+                cv2.putText(img, game_state.result_text, (20, 60), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 4, cv2.LINE_AA)
                 if game_state.ai_move and (game_state.showing_result or game_state.game_over):
                     ai_img_path = f'static/{game_state.ai_move}.png'
                     try:
@@ -303,7 +313,7 @@ def game_data():
 
 @app.route('/next_round', methods=['POST'])
 def next_round():
-    if not game_state.game_over:
+    if not game_state.game_over and game_state.waiting_for_next_round:
         game_state.reset_round()
     return '', 204
 
